@@ -15,15 +15,15 @@
 conn_ctx_t *alloc_conn_context() {
   conn_ctx_t *ctx = (conn_ctx_t *) malloc(sizeof(conn_ctx_t));
   ctx->data = NULL;
+  ctx->request_len = 0;
   DEBUG_LOG("alloc conn context");
   return ctx;
 }
 
-uv_buf_t alloc_request_buf(uv_handle_t *handle, size_t suggested_size) {
-  conn_ctx_t *ctx = container_of(handle, conn_ctx_t, client);
-  ctx->request_buf.base = ctx->_request_buf;
-  ctx->request_buf.len = REQUEST_BUF_SIZE;
-  return ctx->request_buf;
+uv_buf_t alloc_request_buf(uv_handle_t *client, size_t suggested_size) {
+  conn_ctx_t *ctx = container_of(client, conn_ctx_t, client);
+  DEBUG_LOG("in alloc_request_buf");
+  return uv_buf_init(ctx->request.buf, REQUEST_BUF_SIZE + RESPONSE_BUF_SIZE);
 }
 
 void context_clean_cb(uv_handle_t* client) {
@@ -33,34 +33,44 @@ void context_clean_cb(uv_handle_t* client) {
   DEBUG_LOG("free context");
 }
 
-void response_send_cb(uv_write_t *res, int status) {
+static void on_request(uv_stream_t *client, ssize_t nread, uv_buf_t buf);
+
+void response_send_cb(uv_write_t *write, int status) {
+  conn_ctx_t *ctx = container_of(write, conn_ctx_t, write);
   if (status < 0) {
-    conn_ctx_t *ctx = container_of(res, conn_ctx_t, res);
     uv_loop_t *loop = ctx->client.loop;
     WARNING_LOG("Write error %s", uv_err_name(uv_last_error(loop)));
   }
   DEBUG_LOG("response send done");
+  uv_close((uv_handle_t*) &ctx->client, context_clean_cb);
 }
 
-void handle_request(uv_work_t *req) {
-  conn_ctx_t *ctx = container_of(req, conn_ctx_t, req);
-  ctx->response_buf.base = ctx->_response_buf;
-  ctx->response_buf.len = RESPONSE_BUF_SIZE;
+void handle_request(uv_work_t *worker) {
+  conn_ctx_t *ctx = container_of(worker, conn_ctx_t, worker);
   int rv = handle_search(ctx);
   DEBUG_LOG("done in work %d", rv);
+  if (rv < 1) {
+    ctx->response_buf.base[0]= '0';
+    ctx->response_buf.len = 1;
+  }
 }
 
-void send_response(uv_work_t *req, int status) {
-  uv_loop_t *loop = req->loop;
+void send_response(uv_work_t *worker, int status) {
+  uv_loop_t *loop = worker->loop;
+  conn_ctx_t *ctx = container_of(worker, conn_ctx_t, worker);
   if (status < 0 && uv_last_error(loop).code == UV_ECANCELED) {
     return;
   }
-  conn_ctx_t *ctx = container_of(req, conn_ctx_t, req);
-  DEBUG_LOG("send response ...\n[%s]", ctx->response_buf.base);
-  uv_write(&ctx->res, &ctx->client, &ctx->response_buf, 1, response_send_cb);
+  DEBUG_LOG("send response [%s]", ctx->response_buf.base);
+  uv_write(&ctx->write, &ctx->client, &ctx->response_buf, 1, response_send_cb);
 }
 
-void on_request(uv_stream_t *client, ssize_t nread, uv_buf_t buf) {
+static void on_request(uv_stream_t *client, ssize_t nread, uv_buf_t buf) {
+  if (nread == 0) {
+    DEBUG_LOG("read 0");
+    return;
+  }
+
   conn_ctx_t *ctx = container_of(client, conn_ctx_t, client);
   uv_loop_t *loop = client->loop;
   if (nread < 0) {
@@ -68,17 +78,27 @@ void on_request(uv_stream_t *client, ssize_t nread, uv_buf_t buf) {
       WARNING_LOG("Read error %s", uv_err_name(uv_last_error(loop)));
     }
     DEBUG_LOG("nread %ld < 0 and close client", nread);
-    uv_cancel((uv_req_t*) &ctx->req);
+    uv_cancel((uv_req_t*) &ctx->worker);
     uv_close((uv_handle_t*) client, context_clean_cb);
     return;
   }
 
-  buf.base[nread] = '\0';
-  buf.len = nread;
-  ctx->request_buf.len = nread;
-  DEBUG_LOG("read %ld [%s]", nread, buf.base);
+  ctx->request_len += nread;
+  if (ctx->request_len > (int)REQUEST_BUF_SIZE) {
+    ctx->request_len = REQUEST_BUF_SIZE;
+    return;
+  }
 
-  uv_queue_work(loop, &ctx->req, handle_request, send_response);
+  DEBUG_LOG("read %ld/%d/%ld", nread, ctx->request_len, REQUEST_BUF_SIZE);
+  ctx->response_buf.base = ctx->_response.buf;
+  ctx->response_buf.len = 0;
+  if (ctx->request.params.magic != sizeof(query_params_t)) {
+    WARNING_LOG("read request's magic is not correct");
+    uv_close((uv_handle_t*) client, context_clean_cb);
+    return;
+  }
+
+  uv_queue_work(loop, &ctx->worker, handle_request, send_response);
 }
 
 void on_new_connection(uv_stream_t *server, int status) {
@@ -92,7 +112,7 @@ void on_new_connection(uv_stream_t *server, int status) {
   uv_tcp_init(loop, (uv_tcp_t*) &ctx->client);
   if (uv_accept(server, (uv_stream_t*) &ctx->client) == 0) {
     INFO_LOG("accept once");
-    uv_read_start((uv_stream_t*) &ctx->client, alloc_request_buf, on_request);
+    uv_read_start(&ctx->client, alloc_request_buf, on_request);
   } else {
     DEBUG_LOG("accept fail");
     uv_close((uv_handle_t*) &ctx->client, context_clean_cb);

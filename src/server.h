@@ -3,17 +3,28 @@
 
 #include <uv.h>
 
-#define REQUEST_BUF_SIZE 8192
+typedef struct query_params_t
+{
+	int magic;
+	char slot_id[12];
+} query_params_t;
+
+#define REQUEST_BUF_SIZE sizeof(query_params_t)
 #define RESPONSE_BUF_SIZE 65535
 typedef struct conn_ctx_t {
-  uv_work_t req;
-  uv_write_t res;
+  uv_work_t worker;
+  uv_write_t write;
   uv_stream_t client;
 
-  uv_buf_t request_buf;
+  int request_len;
+  union {
+    query_params_t params;
+    char buf[REQUEST_BUF_SIZE];
+  } request;
+  union {
+    char buf[RESPONSE_BUF_SIZE];
+  } _response;
   uv_buf_t response_buf;
-  char _request_buf[REQUEST_BUF_SIZE];
-  char _response_buf[RESPONSE_BUF_SIZE];
 
   int status;
   void *data;
