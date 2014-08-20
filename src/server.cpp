@@ -50,8 +50,9 @@ void handle_request(uv_work_t *worker) {
   int rv = handle_search(ctx);
   DEBUG_LOG("done in work %d", rv);
   if (rv < 1) {
-    ctx->response_buf.base[0]= '0';
-    ctx->response_buf.len = 1;
+    ctx->response_buf.base[0]= '[';
+    ctx->response_buf.base[1]= ']';
+    ctx->response_buf.len = 2;
   }
 }
 

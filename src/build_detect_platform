@@ -60,14 +60,4 @@ else
     echo "GOOGLE_PERFTOOLS=0" >> build_config.mk
 fi
 
-# Test whether aslib are installed
-g++ $CFLAGS -I$HOME/ulib/include -L$HOME/ulib/lib -lulog -x c++ - -o /dev/null 2>/dev/null  <<EOF
-  int main() {}
-EOF
-if [ "$?" = 0 ]; then
-    echo "ULIB=1" >> build_config.mk
-else
-    echo "ULIB=0" >> build_config.mk
-fi
-
 echo "PORT_CFLAGS=$PORT_CFLAGS" >> build_config.mk

@@ -5,6 +5,8 @@
 #include <errno.h>
 #include <hiredis/hiredis.h>
 
+#include <map>
+
 #include "core.h"
 
 typedef struct ad_index_t {
@@ -15,6 +17,17 @@ typedef struct ad_index_t {
   unsigned int area;
   unsigned int ad_id;
 } ad_index_t;
+
+int chrcount(const char *str, const char c) {
+  int count = 0;
+  while (*str) {
+    if (*str == c) {
+      count++;
+    }
+    str++;
+  }
+  return count;
+}
 
 int server_init() {
 	return 0;
@@ -28,6 +41,9 @@ void server_ctx_clean(conn_ctx_t *ctx) {
 }
 
 int string_to_indexes(const char *str, ad_index_t **indexes, int max_num) {
+  std::map<int, int> ad_map;
+  std::map<int, int>::iterator it;
+
   if (!str) {
     return -1;
   }
@@ -63,7 +79,7 @@ int string_to_indexes(const char *str, ad_index_t **indexes, int max_num) {
   MOVE_AFTER(p, '@');
 
   int i=0;
-  for(i=0; i<count && *p; i++) {
+  while (i<count && *p) {
     pend = p;
     MOVE_AFTER(pend, ';');
 
@@ -79,6 +95,11 @@ int string_to_indexes(const char *str, ad_index_t **indexes, int max_num) {
     NEXT_ITEM(p);
     pindex[i].ad_id = atoi(p);
 
+    it=ad_map.find(pindex[i].ad_id);
+    if (it == ad_map.end()) {
+      ad_map[pindex[i].ad_id] = i;
+      i++;
+    }
     p = pend;
   }
   return i;
@@ -102,6 +123,19 @@ redisContext *get_redis_ctx(conn_ctx_t *ctx) {
 void empty_response_buf(uv_buf_t *buf) {
   buf->base[0] = '\0';
   buf->len = 0;
+}
+
+const char *str_index(const char *str, const char c, int num) {
+  while (*str) {
+    if (*str == c) {
+      if (num == 0) {
+        return str;
+      }
+      num--;
+    }
+    str++;
+  }
+  return NULL;
 }
 
 int handle_search(conn_ctx_t *ctx) {
@@ -131,13 +165,22 @@ int handle_search(conn_ctx_t *ctx) {
   }
   strncpy(key + 4, reply->str, len);
   key[len+4] = '\0';
+  int num = 4;
+  int c_count = chrcount(key, '_');
+  if (c_count > 4) {
+    const char *str_num = str_index((const char *)key, '_', 4);
+    if (str_num) {
+      num = atoi(str_num+1);
+    }
+  }
 
+  DEBUG_LOG("get index %s", key);
   reply = (redisReply *) redisCommand(redis_ctx, "GET %s", key);
   if (reply == NULL) {
     return -1;
   }
   ad_index_t *indexes = NULL;
-  int count = string_to_indexes(reply->str, &indexes, 4);
+  int count = string_to_indexes(reply->str, &indexes, num);
   freeReplyObject(reply);
   if (count < 1) {
     return 0;
@@ -146,13 +189,16 @@ int handle_search(conn_ctx_t *ctx) {
   char *buf = ctx->response_buf.base;
   len = 0;
   int i = 0;
+  len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, "[");
   for (i=0; i<count; i++) {
-    reply = (redisReply *) redisCommand(redis_ctx, "GET ad_%ld", indexes[i].ad_id);
+    reply = (redisReply *) redisCommand(redis_ctx, "GET meterial_%u", indexes[i].ad_id);
     if (reply == NULL) {
       continue;
     }
-    len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, "%s\n", reply->str);
+    DEBUG_LOG("get ad %u", indexes[i].ad_id);
+    len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, "%s%s\n", (i==0)?"":",", reply->str);
   }
+  len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, "]");
   free(indexes);
 
   ctx->response_buf.len = len;
