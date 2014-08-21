@@ -49,11 +49,6 @@ void handle_request(uv_work_t *worker) {
   conn_ctx_t *ctx = container_of(worker, conn_ctx_t, worker);
   int rv = handle_search(ctx);
   DEBUG_LOG("done in work %d", rv);
-  if (rv < 1) {
-    ctx->response_buf.base[0]= '[';
-    ctx->response_buf.base[1]= ']';
-    ctx->response_buf.len = 2;
-  }
 }
 
 void send_response(uv_work_t *worker, int status) {
