@@ -34,7 +34,7 @@ LIBO = searchd
 
 all	: $(LIBO)
 
-searchd : main.o server.o core.o
+searchd : main.o server.o core.o conf.o
 	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(LIBS)
 
 .PHONY : clean cleanall tags

@@ -14,6 +14,7 @@
 
 #include <uv.h>
 
+#include "conf.h"
 #include "server.h"
 #include "core.h"
 
@@ -36,25 +37,11 @@ void usage(char * prname)
 	printf("	[-p]  set work path\n");
 }
 
-int load_conf()
-{
-	g_conf.listen_port = 3000;
-  g_conf.read_tmout = 500;
-  g_conf.write_tmout = 500;
-
-	g_conf.merge_weight = 500;
-	g_conf.magic = 0;
-
-	g_conf.server_group_id = 1;
-
-	return 0;
-}
-
 int init()
 {
   signal(SIGPIPE, SIG_IGN);
 	// load_sysconf
-	if (load_conf() < 0) {
+	if (load_conf(&g_conf, "../conf/server.conf") < 0) {
 		return -1;
 	}
 
