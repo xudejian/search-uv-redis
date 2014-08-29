@@ -19,15 +19,10 @@ dataToObj = (data) ->
 
 render_wenzi = (ad) ->
   [
-    '<a target="_blank" style="color:#666;font-family:宋体;font-size:12px;" href="'
+    '<a target="_blank" style="color:#666;font-family:宋体;font-size:12px;margin-left:20px" href="'
     ad.click_url
     '">'
-    '<div style="float:left;margin:0 5px 5px 0;padding:5px;border:solid 1px #ccc;background: #eee;">'
     ad.txt_title
-    '</div>'
-    ad.txt_desc1
-    ','
-    ad.txt_desc2
     '</a>'
   ].join('')
 
@@ -54,6 +49,7 @@ render = (data, dom_id) ->
     ad = dataToObj i
     html.push (render_fn[ad.type]||empty) ad
   $("#"+dom_id).html html.join ''
+    .css 'border': 'solid 3px red'
 
 # 渲染第3种样式：悬浮广告位
 render3 = (data) ->
