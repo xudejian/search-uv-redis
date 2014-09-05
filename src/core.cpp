@@ -120,11 +120,6 @@ redisContext *get_redis_ctx(conn_ctx_t *ctx) {
   return (redisContext *)(ctx->data);
 }
 
-void empty_response_buf(uv_buf_t *buf) {
-  buf->base[0] = '\0';
-  buf->len = 0;
-}
-
 const char *str_index(const char *str, const char c, int num) {
   while (*str) {
     if (*str == c) {
@@ -151,21 +146,18 @@ int handle_search(conn_ctx_t *ctx) {
   ad_index_t *indexes = NULL;
   redisReply *reply = NULL;
 
-  empty_response_buf(&ctx->response_buf);
-  char *buf = ctx->response_buf.base;
+  memset(&ctx->response.head, 0, sizeof(ctx->response.head));
+  char *buf = ctx->response.buf;
   int len = 0;
 
-  len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, "{"EOL);
-
-  len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, "slot_id:%s"EOL, ctx->request.params.slot_id);
-  DEBUG_LOG("req %s", ctx->request.params.slot_id);
+  DEBUG_LOG("req %s", ctx->request.params.query);
 
   redisContext * redis_ctx = get_redis_ctx(ctx);
   if (redis_ctx == NULL) {
     goto fail;
   }
 
-  reply = (redisReply *) redisCommand(redis_ctx, "GET slot_%s", ctx->request.params.slot_id);
+  reply = (redisReply *) redisCommand(redis_ctx, "GET slot_%s", ctx->request.params.query);
   if (reply == NULL) {
     goto fail;
   }
@@ -180,19 +172,17 @@ int handle_search(conn_ctx_t *ctx) {
     i = sizeof(key) - 1;
   }
 
-  len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, ",type:%d"EOL, atoi(reply->str));
+  ctx->response.head.data.type = atoi(reply->str);
 
   strncpy(key + 1, reply->str, i);
   key[i+1] = '\0';
   p = str_index((const char *)key, '_', 1);
   if (p) {
-    num = atoi(p+1);
-    len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, ",width:%d"EOL, num);
+    ctx->response.head.data.width = atoi(p+1);
   }
   p = str_index((const char *)key, '_', 2);
   if (p) {
-    num = atoi(p+1);
-    len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, ",height:%d"EOL, num);
+    ctx->response.head.data.height = atoi(p+1);
   }
   num = 4;
   p = str_index((const char *)key, '_', 3);
@@ -200,7 +190,12 @@ int handle_search(conn_ctx_t *ctx) {
     num = atoi(p+1);
     *(char *)p = '\0';
   }
-  len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, ",num:%d"EOL, num);
+  ctx->response.head.data.capacity = num;
+
+  p = str_index((const char *)key, '_', 4);
+  if (p) {
+    ctx->response.head.data.tpl = atoi(p+1);
+  }
 
   DEBUG_LOG("get index %s", key);
   reply = (redisReply *) redisCommand(redis_ctx, "GET %s", key);
@@ -210,27 +205,27 @@ int handle_search(conn_ctx_t *ctx) {
   count = string_to_indexes(reply->str, &indexes, num);
   freeReplyObject(reply);
 
-  len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, ",set:["EOL);
   for (i=0; i<count; i++) {
     reply = (redisReply *) redisCommand(redis_ctx, "GET meterial_%u", indexes[i].ad_id);
     if (reply == NULL) {
       continue;
     }
     DEBUG_LOG("get ad %u", indexes[i].ad_id);
-    len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, "%s%s\n", (i==0)?"":",", reply->str);
+    len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, ",%s"EOL, reply->str);
+    ctx->response.head.return_num++;
+    ctx->response.head.total_num++;
+    ctx->response.head.res_num++;
   }
-  len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, "]"EOL);
   if (indexes) {
     free(indexes);
     indexes = NULL;
   }
 
-  len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, "}"EOL);
-  ctx->response_buf.len = len;
+  ctx->response.head.len = len;
   return count;
 
 fail:
-  len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, "}"EOL);
-  ctx->response_buf.len = len;
+  len = snprintf(buf, RESPONSE_BUF_SIZE, "/*fail*/"EOL);
+  ctx->response.head.len = len;
   return -1;
 }

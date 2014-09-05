@@ -3,11 +3,37 @@
 
 #include <uv.h>
 
-typedef struct query_params_t
-{
+#define MAX_QUERY_WORD_LEN 12
+#define MAX_TEMPLATE_NAME_LEN	32
+
+typedef struct {
 	int magic;
-	char slot_id[12];
+	char  query[MAX_QUERY_WORD_LEN];
+	u_short page_no;
+	u_short rn;
+	u_short sort;
+	u_short other;
+	char  tn[MAX_TEMPLATE_NAME_LEN];
+	char need_merge;
+	char need_pb;
 } query_params_t;
+
+typedef struct {
+	u_int type;
+	u_int width;
+	u_int height;
+	u_int capacity;
+	u_int tpl;
+} upstream_response_head_data_t;
+
+typedef struct {
+	u_int status;
+	u_int return_num;					//返回结果条数
+	u_int res_num;						//返回结果条数
+	u_int total_num;					//搜索到结果总数
+	u_int len;
+  upstream_response_head_data_t data;
+} upstream_response_head_t;
 
 #define REQUEST_BUF_SIZE sizeof(query_params_t)
 #define RESPONSE_BUF_SIZE 65535
@@ -21,9 +47,11 @@ typedef struct conn_ctx_t {
     query_params_t params;
     char buf[REQUEST_BUF_SIZE];
   } request;
-  union {
+
+  struct {
+    upstream_response_head_t head;
     char buf[RESPONSE_BUF_SIZE];
-  } _response;
+  } response;
   uv_buf_t response_buf;
 
   int status;

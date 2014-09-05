@@ -42,7 +42,7 @@ void response_send_cb(uv_write_t *write, int status) {
     WARNING_LOG("Write error %s", uv_err_name(uv_last_error(loop)));
   }
   DEBUG_LOG("response send done");
-  uv_close((uv_handle_t*) &ctx->client, context_clean_cb);
+  //uv_close((uv_handle_t*) &ctx->client, context_clean_cb);
 }
 
 void handle_request(uv_work_t *worker) {
@@ -52,12 +52,14 @@ void handle_request(uv_work_t *worker) {
 }
 
 void send_response(uv_work_t *worker, int status) {
-  uv_loop_t *loop = worker->loop;
-  conn_ctx_t *ctx = container_of(worker, conn_ctx_t, worker);
-  if (status < 0 && uv_last_error(loop).code == UV_ECANCELED) {
+  if (status < 0) {
     return;
   }
-  DEBUG_LOG("send response [%s]", ctx->response_buf.base);
+  uv_loop_t *loop = worker->loop;
+  conn_ctx_t *ctx = container_of(worker, conn_ctx_t, worker);
+  DEBUG_LOG("send response [%s]", ctx->response.buf);
+  ctx->response_buf.base = (char *)&ctx->response;
+  ctx->response_buf.len = ctx->response.head.len + sizeof(upstream_response_head_t);
   uv_write(&ctx->write, &ctx->client, &ctx->response_buf, 1, response_send_cb);
 }
 
@@ -86,14 +88,13 @@ static void on_request(uv_stream_t *client, ssize_t nread, uv_buf_t buf) {
   }
 
   DEBUG_LOG("read %ld/%d/%ld", nread, ctx->request_len, REQUEST_BUF_SIZE);
-  ctx->response_buf.base = ctx->_response.buf;
-  ctx->response_buf.len = 0;
   if (ctx->request.params.magic != sizeof(query_params_t)) {
     WARNING_LOG("read request's magic is not correct");
     uv_close((uv_handle_t*) client, context_clean_cb);
     return;
   }
 
+  ctx->response.head.len = 0;
   uv_queue_work(loop, &ctx->worker, handle_request, send_response);
 }
 
