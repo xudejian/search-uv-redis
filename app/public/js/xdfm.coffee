@@ -45,7 +45,7 @@ render_fn =
 
 render = (data, dom_id) ->
   html = []
-  for i in data.set
+  for i in data.set when i
     ad = dataToObj i
     html.push (render_fn[ad.type]||empty) ad
   $("#"+dom_id).html html.join ''
