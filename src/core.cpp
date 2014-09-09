@@ -227,5 +227,8 @@ int handle_search(conn_ctx_t *ctx) {
 fail:
   len = snprintf(buf, RESPONSE_BUF_SIZE, "/*fail*/"EOL);
   ctx->response.head.len = len;
+  ctx->response.head.return_num = 0;
+  ctx->response.head.total_num = 0;
+  ctx->response.head.res_num = 0;
   return -1;
 }
