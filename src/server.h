@@ -1,8 +1,12 @@
 #ifndef __ADS_SERVER_H_
 #define __ADS_SERVER_H_
 
+#include <iostream>
+#include <string>
+#include <unordered_map>
 #include <uv.h>
 
+typedef std::unordered_map<long int, bool> deleted_map;
 #define MAX_QUERY_WORD_LEN 12
 #define MAX_TEMPLATE_NAME_LEN	32
 
@@ -59,5 +63,14 @@ typedef struct conn_ctx_t {
 } conn_ctx_t;
 
 extern uv_tcp_t * server_listen(const char *ip, int port, uv_loop_t *loop);
+
+typedef struct {
+  uv_loop_t *loop;
+  uv_timer_t timer_deleted_list;
+  deleted_map list_0;
+  deleted_map list_1;
+  int cur_deleted_list;
+  long long int deleted_list_updated_at;
+} system_context_t;
 
 #endif

@@ -28,13 +28,13 @@ LDFLAGS=$(PLATFORM_LDFLAGS) -static
 CFLAGS += $(shell pkg-config --cflags json-c)
 LDFLAGS += $(shell pkg-config --libs json-c)
 
-CPPFLAGS = $(CFLAGS)
+CPPFLAGS = $(CFLAGS) -std=gnu++11
 LIBS = -luv -lhiredis
 LIBO = searchd
 
 all	: $(LIBO)
 
-searchd : main.o server.o core.o conf.o
+searchd : main.o server.o core.o conf.o deleted_list.o
 	$(CC) -o $@ $^ $(CPPFLAGS) $(LDFLAGS) $(LIBS)
 
 .PHONY : clean cleanall tags
@@ -46,3 +46,7 @@ clean:
 	@rm -f *.o *~ $(LIBO)
 cleanall: clean
 	@rm -f tags build_config.mk
+scp: $(LIBO)
+	ssh a.dc.xdf.cn 'rm -f searchd'
+	scp $(LIBO) a.dc.xdf.cn:~/
+	ssh a.dc.xdf.cn 'scp searchd 10.200.130.197:~/search/bin/searchd.new'

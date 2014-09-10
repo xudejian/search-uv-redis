@@ -8,14 +8,15 @@
 #include <map>
 
 #include "core.h"
+#include "deleted_list.h"
 
 typedef struct ad_index_t {
-  unsigned int doc_id;
+  unsigned int ad_id;
   unsigned int tf;
   unsigned int weight;
   unsigned int valid;
   unsigned int area;
-  unsigned int ad_id;
+  unsigned int doc_id;
 } ad_index_t;
 
 int chrcount(const char *str, const char c) {
@@ -83,7 +84,7 @@ int string_to_indexes(const char *str, ad_index_t **indexes, int max_num) {
     pend = p;
     MOVE_AFTER(pend, ';');
 
-    pindex[i].doc_id = atoi(p);
+    pindex[i].ad_id = atoi(p);
     NEXT_ITEM(p);
     pindex[i].tf = atoi(p);
     NEXT_ITEM(p);
@@ -93,11 +94,11 @@ int string_to_indexes(const char *str, ad_index_t **indexes, int max_num) {
     NEXT_ITEM(p);
     //pindex[i].area = atoi(p);
     NEXT_ITEM(p);
-    pindex[i].ad_id = atoi(p);
+    pindex[i].doc_id = atoi(p);
 
-    it=ad_map.find(pindex[i].ad_id);
+    it=ad_map.find(pindex[i].doc_id);
     if (it == ad_map.end()) {
-      ad_map[pindex[i].ad_id] = i;
+      ad_map[pindex[i].doc_id] = i;
       i++;
     }
     p = pend;
@@ -206,11 +207,15 @@ int handle_search(conn_ctx_t *ctx) {
   freeReplyObject(reply);
 
   for (i=0; i<count; i++) {
-    reply = (redisReply *) redisCommand(redis_ctx, "GET meterial_%u", indexes[i].ad_id);
+    if (is_deleted_adid(ctx->client.loop, (long int)indexes[i].ad_id)) {
+      DEBUG_LOG("deleted adid %d", indexes[i].ad_id);
+      continue;
+    }
+    reply = (redisReply *) redisCommand(redis_ctx, "GET meterial_%u", indexes[i].doc_id);
     if (reply == NULL) {
       continue;
     }
-    DEBUG_LOG("get ad %u", indexes[i].ad_id);
+    DEBUG_LOG("get ad %u", indexes[i].doc_id);
     len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, ",%s"EOL, reply->str);
     ctx->response.head.return_num++;
     ctx->response.head.total_num++;

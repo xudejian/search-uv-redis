@@ -17,6 +17,7 @@
 #include "conf.h"
 #include "server.h"
 #include "core.h"
+#include "deleted_list.h"
 
 Conf_t g_conf;
 char g_sys_path[MAX_PATH_LEN];
@@ -122,10 +123,19 @@ int main(int argc, char *argv[])
     return EXIT_FAILURE;
   }
 
-  uv_loop_t *loop = uv_loop_new();
+  system_context_t *sys_ctx = (system_context_t *)malloc(sizeof(system_context_t));
+  if (!sys_ctx) {
+    WARNING_LOG("mem fail, malloc system_context_t fail");
+    return EXIT_FAILURE;
+  }
+	uv_loop_t *loop = uv_loop_new();
+  sys_ctx->loop = loop;
+  loop->data = sys_ctx;
+
+  init_deleted_list(sys_ctx);
+
   const char *ip = "0.0.0.0";
   const int port = g_conf.listen_port;
-
   uv_tcp_t *server = server_listen(ip, port, loop);
   if (!server) {
     DEBUG_LOG("Listen error %s", uv_err_name(uv_last_error(loop)));
