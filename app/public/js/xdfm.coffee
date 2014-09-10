@@ -2,6 +2,8 @@
 
 loadAd = (data, dom_id) ->
   if data
+    return if data.empty
+    return if data.error
     render(data, dom_id)
 
 dataToObj = (data) ->
