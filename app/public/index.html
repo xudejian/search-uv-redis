@@ -6,22 +6,39 @@
     <script src="http://images.xdf.cn/v4/js/jquery.js"></script>
     <!-- 请置于所有广告位代码之前 -->
     <script src="/js/xdfm.js"></script>
+
+    <script>
+      function preview(form) {
+        if (form.slot_id.value.length < 1) {
+          return false;
+        }
+        window.name = form.slot_id.value;
+        location.href = location.href;
+        return false;
+      }
+      var slot_id = window.name || '';
+      slot_id = parseInt(slot_id, 10) || 0;
+
+      $(function(){
+          if (slot_id) {
+            $('#slot_id').val(slot_id);
+          }
+      });
+    </script>
 </head>
 
 
 <body>
 
-    <div style="border:solid 1px blue;">
-        <script> xdf.fillSlot(9); </script>
-    </div>
-
-    <div style="border:solid 1px blue;">
-        <script> xdf.fillSlot(10); </script>
-    </div>
-
-    <div style="border:solid 1px blue;">
-        <script> xdf.fillSlot(11); </script>
-    </div>
+<div id="ctl">
+  <form name="ctl" onsubmit="return preview(this)">
+    <p> <label> 广告位id: <input type="text" name="slot_id" id="slot_id"> </label> <input type="submit" value="预览"> </p>
+    <p> 比如: 1071381921   1071381922   1071381923</p>
+  </form>
+</div>
+<div id="container">
+  <script> if (slot_id) {xdf.fillSlot(slot_id);} </script>
+</div>
 
 </body>
 
