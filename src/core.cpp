@@ -185,6 +185,12 @@ int handle_search(conn_ctx_t *ctx) {
   if (p) {
     ctx->response.head.data.height = atoi(p+1);
   }
+
+  p = str_index((const char *)key, '_', 4);
+  if (p) {
+    ctx->response.head.data.tpl = atoi(p+1);
+  }
+
   num = 4;
   p = str_index((const char *)key, '_', 3);
   if (p) {
@@ -192,11 +198,6 @@ int handle_search(conn_ctx_t *ctx) {
     *(char *)p = '\0';
   }
   ctx->response.head.data.capacity = num;
-
-  p = str_index((const char *)key, '_', 4);
-  if (p) {
-    ctx->response.head.data.tpl = atoi(p+1);
-  }
 
   DEBUG_LOG("get index %s", key);
   reply = (redisReply *) redisCommand(redis_ctx, "GET %s", key);
