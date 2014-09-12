@@ -7,7 +7,7 @@
 #include <uv.h>
 
 typedef std::unordered_map<long int, bool> deleted_map;
-#define MAX_QUERY_WORD_LEN 12
+#define MAX_QUERY_WORD_LEN 128
 #define MAX_TEMPLATE_NAME_LEN	32
 
 typedef struct {
