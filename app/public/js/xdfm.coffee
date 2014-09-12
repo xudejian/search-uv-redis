@@ -215,28 +215,29 @@ render_fn =
 
 event_carousel = (el, data) ->
   main = el.find '#main'
-  first = el.find('li').eq(0)
-  main.find('a').attr('href', first.find('a').attr('href'))
-  main.find('img').attr('src', first.data('src'))
+  active = (item) ->
+    main.find('a').attr('href', item.find('a').attr('href'))
+    main.find('img').attr('src', item.data('src'))
+
   count = el.find('li').length
   return if count < 0
+
+  first = el.find('li').eq(0)
+  active first
   cur = 0
 
   next = ->
     cur = cur+1
     if cur >= count
       cur = 0
-    self = el.find('li').eq cur
-    main.find('a').attr('href', self.find('a').attr('href'))
-    main.find('img').attr('src', self.data('src'))
+    active el.find('li').eq cur
 
   setInterval (->next()), 2000
 
   el.find('li').each ->
     self = $(@)
     self.mouseenter ->
-      main.find('a').attr('href', self.find('a').attr('href'))
-      main.find('img').attr('src', self.data('src'))
+      active self
 
 event_pair = (el, data) ->
   el.find('.xdf_pair_ad_close').off().click ->
@@ -269,8 +270,10 @@ render = (data, dom_id) ->
   if event_fn[data.tpl]
     event_fn[data.tpl] slot, data
 
-@xdf.fillSlot = (id) ->
+@xdf.fillSlot = (id, q) ->
   slot_id = 'xdf_slot_' + id
   document.write("<div id='"+slot_id+"'></div>")
   cb = (data) -> loadAd data, slot_id
-  $.getJSON "http://ads.staff.xdf.cn/demo/#{id}?callback=?", cb
+  data =
+    q: q||''
+  $.getJSON "http://ads.staff.xdf.cn/demo/#{id}?callback=?", data, cb
