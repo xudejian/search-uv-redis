@@ -117,22 +117,40 @@ render_mn_pic = (data) ->
   html.join('')
 
 render_carousel = (data) ->
-  html = []
+  html = [
+    '<div style="width:300px;height:180px;">'
+    '  <div id="main" style="width:220px;height:180px;float:left">'
+    '    <a target="_blank" href="#"><img width="100%" height="100%" border="0"></a>'
+    '  </div>'
+    '  <div id="items" style="width:80px;height:180px;float:right;background: #f3f3f3">'
+    '    <ul style="height:180px;padding: 0;margin: 0">'
+  ]
+  li_style = 'display: block;width:100%;height:29px;background: #444;text-align: center;line-height: 29px;border-bottom: solid 1px #222'
   for i in data.set when i
     ad = dataToObj i
     html.push [
-      '<a style="border:0" target="_blank" href="'
-      ad.click_url
-      '"><img src="'
+      '<li style="'
+      li_style
+      '" data-src="'
       ad.img
-      '" alt="'
+      '"><a target="_blank" style="color:#f3f3f3;text-decoration:none" href="'
+      ad.click_url
+      '">'
       ad.img_desc
-      '"></a>'
+      '</a></li>'
     ].join('')
+
+  html.push [
+    '    </ul>'
+    '  </div>' 
+    '</div>'
+  ].join ''
   html.join('')
 
 render_pair = (data) ->
+  close_style = 'position: absolute; bottom: 0px; background: #fff; width:20px; height: 20px; line-height: 20px; text-align: center; cursor: pointer; font-family: "微软雅黑"; color:#666;'
   html = []
+  html.push '<div style="width:200px; height:250px; overflow:hidden; position: absolute; left:20px; top:160px; border:solid 1px #aaa">'
   for i in data.set when i
     ad = dataToObj i
     html.push [
@@ -140,10 +158,24 @@ render_pair = (data) ->
       ad.click_url
       '"><img src="'
       ad.img
-      '" alt="'
-      ad.img_desc
-      '"></a>'
+      '" width="100%" border="0"></a>'
     ].join('')
+  html.push "<div class='xdf_pair_ad_close' style='#{close_style}'>X</div>"
+  html.push '</div>'
+
+  html.push '<div style="width:200px; height:250px; overflow:hidden; position: absolute; right:20px; top:160px; border:solid 1px #aaa">'
+  for i in data.set when i
+    ad = dataToObj i
+    html.push [
+      '<a target="_blank" href="'
+      ad.click_url
+      '"><img src="'
+      ad.img
+      '" width="100%" border="0"></a>'
+    ].join('')
+
+  html.push "<div class='xdf_pair_ad_close' style='#{close_style}'>X</div>"
+  html.push '</div>'
   html.join('')
 
 render_float = (data) ->
@@ -181,6 +213,39 @@ render_fn =
   '6': render_float
   '1': render_baidu_wenzi
 
+event_carousel = (el, data) ->
+  main = el.find '#main'
+  first = el.find('li').eq(0)
+  main.find('a').attr('href', first.find('a').attr('href'))
+  main.find('img').attr('src', first.data('src'))
+  count = el.find('li').length
+  return if count < 0
+  cur = 0
+
+  next = ->
+    cur = cur+1
+    if cur >= count
+      cur = 0
+    self = el.find('li').eq cur
+    main.find('a').attr('href', self.find('a').attr('href'))
+    main.find('img').attr('src', self.data('src'))
+
+  setInterval (->next()), 2000
+
+  el.find('li').each ->
+    self = $(@)
+    self.mouseenter ->
+      main.find('a').attr('href', self.find('a').attr('href'))
+      main.find('img').attr('src', self.data('src'))
+
+event_pair = (el, data) ->
+  el.find('.xdf_pair_ad_close').off().click ->
+    el.remove()
+
+event_fn =
+  '4': event_carousel
+  '5': event_pair
+
 render = (data, dom_id) ->
   slot = $("#"+dom_id)
   slot.html (render_fn[data.tpl]||empty) data
@@ -191,7 +256,7 @@ render = (data, dom_id) ->
       css.width = data.width + 'px'
     if data.height
       css.height = data.height + 'px'
-    css.border = 'solid 1px green'
+    #css.border = 'solid 1px green'
   if data.AdLeft
     css.left = data.AdLeft
   if data.AdTop
@@ -201,6 +266,8 @@ render = (data, dom_id) ->
   if data.AdBottom
     css.bottom = data.AdBottom
   slot.css css
+  if event_fn[data.tpl]
+    event_fn[data.tpl] slot, data
 
 @xdf.fillSlot = (id) ->
   slot_id = 'xdf_slot_' + id
