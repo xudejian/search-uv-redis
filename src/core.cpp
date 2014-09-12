@@ -151,14 +151,14 @@ int handle_search(conn_ctx_t *ctx) {
   char *buf = ctx->response.buf;
   int len = 0;
 
-  DEBUG_LOG("req %s", ctx->request.params.query);
+  DEBUG_LOG("req [%s] %ld", ctx->request.params.query, ctx->request.params.slot_id);
 
   redisContext * redis_ctx = get_redis_ctx(ctx);
   if (redis_ctx == NULL) {
     goto fail;
   }
 
-  reply = (redisReply *) redisCommand(redis_ctx, "GET slot_%s", ctx->request.params.query);
+  reply = (redisReply *) redisCommand(redis_ctx, "GET slot_%ld", ctx->request.params.slot_id);
   if (reply == NULL) {
     goto fail;
   }
@@ -199,8 +199,8 @@ int handle_search(conn_ctx_t *ctx) {
   }
   ctx->response.head.data.capacity = num;
 
-  DEBUG_LOG("get index %s", key);
-  reply = (redisReply *) redisCommand(redis_ctx, "GET %s", key);
+  DEBUG_LOG("get index %s%s", ctx->request.params.query, key);
+  reply = (redisReply *) redisCommand(redis_ctx, "GET %s%s", ctx->request.params.query, key);
   if (reply == NULL) {
     goto fail;
   }

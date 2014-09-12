@@ -13,6 +13,7 @@ typedef std::unordered_map<long int, bool> deleted_map;
 typedef struct {
 	int magic;
 	char  query[MAX_QUERY_WORD_LEN];
+	long int slot_id;
 	u_short page_no;
 	u_short rn;
 	u_short sort;
