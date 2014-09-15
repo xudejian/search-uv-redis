@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
 #include <errno.h>
 #include <hiredis/hiredis.h>
 #include <unordered_map>
@@ -36,6 +35,7 @@ int init_deleted_list(system_context_t *sctx)
   load_deleted_list(sctx);
   uv_timer_init(sctx->loop, &sctx->timer_deleted_list);
   uv_timer_start(&sctx->timer_deleted_list, check_deleted_list_update, 60000, 0);
+  return 0;
 }
 
 static long int get_deleted_list_updated_time()

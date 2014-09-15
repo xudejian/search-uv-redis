@@ -6,9 +6,7 @@ PROJECT_FILE_VERSION $Id: define.h 10609 2012-03-12 03:32:20Z xudejian $
 
 #include <unistd.h>
 #include <sys/time.h>
-#include <sys/sysinfo.h>
 #include <sys/mman.h>
-#include <linux/limits.h>
 
 #ifdef GOOGLE_PERFTOOLS
 # include <google/malloc_extension.h>

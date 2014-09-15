@@ -18,13 +18,13 @@
 #define LIGHT_GRAY "\033[0;37m"
 #define WHITE "\033[1;37m"
 
-#define WARNING_LOG(fmt, ...) printf(RED"%s:%d (%s): " fmt "\n"NONE, __FILE__, __LINE__, __func__, ## __VA_ARGS__)
+#define WARNING_LOG(fmt, ...) printf(RED"%s:%d (%s): " fmt "\n" NONE, __FILE__, __LINE__, __func__, ## __VA_ARGS__)
 
-#define DEBUG_LOG(fmt, ...) printf(GREEN"%s:%d (%s): " fmt "\n"NONE, __FILE__, __LINE__, __func__, ## __VA_ARGS__)
+#define DEBUG_LOG(fmt, ...) printf(GREEN"%s:%d (%s): " fmt "\n" NONE, __FILE__, __LINE__, __func__, ## __VA_ARGS__)
 
-#define INFO_LOG(fmt, ...) printf(BLUE"" fmt "\n"NONE,  ## __VA_ARGS__)
+#define INFO_LOG(fmt, ...) printf(BLUE"" fmt "\n" NONE,  ## __VA_ARGS__)
 
-#define LOG(fmt, ...) printf(WHITE"" fmt "\n"NONE, ## __VA_ARGS__)
+#define LOG(fmt, ...) printf(WHITE"" fmt "\n" NONE, ## __VA_ARGS__)
 
 
 #endif // MAJIANG_LOG_H_

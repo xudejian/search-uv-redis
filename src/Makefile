@@ -4,10 +4,10 @@ CC = g++
 # Uncomment exactly one of the lines labelled (A), (B), and (C) below
 # to switch between compilation modes.
 
-OPT = -Wall -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -g -rdynamic
+OPT = -Wall -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE
 DEBUG ?= 1
 ifeq "${DEBUG}" "1"
-OPT += -DDEBUG_TIME
+OPT += -DDEBUG_TIME -g
 else
 OPT += -O2 -DNDEBUG
 endif
@@ -24,10 +24,7 @@ include build_config.mk
 
 CFLAGS = -I. -I./include -D_FILE_OFFSET_BITS=64 $(PORT_CFLAGS) $(PLATFORM_CFLAGS) $(OPT)
 
-LDFLAGS=$(PLATFORM_LDFLAGS) -static
-CFLAGS += $(shell pkg-config --cflags json-c)
-LDFLAGS += $(shell pkg-config --libs json-c)
-
+LDFLAGS=$(PLATFORM_LDFLAGS)
 CPPFLAGS = $(CFLAGS) -std=gnu++11
 LIBS = -luv -lhiredis
 LIBO = searchd

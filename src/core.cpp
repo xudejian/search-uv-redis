@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
 #include <errno.h>
 #include <hiredis/hiredis.h>
 
@@ -217,7 +216,7 @@ int handle_search(conn_ctx_t *ctx) {
       continue;
     }
     DEBUG_LOG("get ad %u", indexes[i].doc_id);
-    len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, ",%s"EOL, reply->str);
+    len += snprintf(buf+len, RESPONSE_BUF_SIZE-len, ",%s" EOL, reply->str);
     ctx->response.head.return_num++;
     ctx->response.head.total_num++;
     ctx->response.head.res_num++;
@@ -231,7 +230,7 @@ int handle_search(conn_ctx_t *ctx) {
   return count;
 
 fail:
-  len = snprintf(buf, RESPONSE_BUF_SIZE, "/*fail*/"EOL);
+  len = snprintf(buf, RESPONSE_BUF_SIZE, "/*fail*/" EOL);
   ctx->response.head.len = len;
   ctx->response.head.return_num = 0;
   ctx->response.head.total_num = 0;
