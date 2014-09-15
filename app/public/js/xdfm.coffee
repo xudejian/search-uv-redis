@@ -252,12 +252,6 @@ render = (data, dom_id) ->
   slot.html (render_fn[data.tpl]||empty) data
 
   css = {}
-  if data.tpl isnt '6'
-    if data.width
-      css.width = data.width + 'px'
-    if data.height
-      css.height = data.height + 'px'
-    #css.border = 'solid 1px green'
   if data.AdLeft
     css.left = data.AdLeft
   if data.AdTop
@@ -274,6 +268,6 @@ render = (data, dom_id) ->
   slot_id = 'xdf_slot_' + id
   document.write("<div id='"+slot_id+"'></div>")
   cb = (data) -> loadAd data, slot_id
-  data =
-    q: q||''
+  data = {}
+  data.q = q if q
   $.getJSON "http://ads.staff.xdf.cn/demo/#{id}?callback=?", data, cb
