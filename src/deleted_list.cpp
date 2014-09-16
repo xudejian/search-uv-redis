@@ -46,7 +46,7 @@ static long int get_deleted_list_updated_time()
     WARNING_LOG("redis connect error: %s", redis->errstr);
     redisFree(redis);
     redis = NULL;
-    return -1;
+    return rv;
   }
 
   redisReply *reply = (redisReply *) redisCommand(redis, "get ad_deleted_docs_version");
@@ -54,10 +54,12 @@ static long int get_deleted_list_updated_time()
     WARNING_LOG("redis get ad deleted docs error: %s", redis->errstr);
     redisFree(redis);
     redis = NULL;
-    return -1;
+    return rv;
   }
 
-  rv = atol(reply->str);
+  if (reply->str) {
+    rv = atol(reply->str);
+  }
 
   freeReplyObject(reply);
   reply = NULL;

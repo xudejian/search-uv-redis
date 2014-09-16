@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <libgen.h>
 #include <getopt.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <execinfo.h>
@@ -55,15 +56,30 @@ int init()
 	return 0;
 }
 
+void get_work_dir(const char *path)
+{
+    realpath(path, g_sys_path);
+    char *p = dirname(g_sys_path);
+    if (NULL == p) {
+      sprintf(g_sys_path, "..");
+      return;
+    }
+    p = dirname(p);
+    if (NULL == p) {
+      sprintf(g_sys_path, "..");
+      return;
+    }
+    if (p[1] == '\0' && p[0] == '.') {
+      sprintf(g_sys_path, "..");
+      return;
+    }
+    sprintf(g_sys_path, "%s", p);
+}
+
 int main_parse_option(int argc, char **argv)
 {
 	memset(&g_conf, 0, sizeof(g_conf));
-	snprintf(g_sys_path, sizeof(g_sys_path), "%s", argv[0]);
-	dirname(g_sys_path);
-	dirname(g_sys_path);
-	if (g_sys_path[1] == '\0' && g_sys_path[0] == '.') {
-		sprintf(g_sys_path, "..");
-	}
+  get_work_dir(argv[0]);
 	char opt = 0;
 	const struct option long_options[] = {
 		{"path",        1, NULL, 'p'},

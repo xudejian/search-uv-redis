@@ -12,6 +12,15 @@
   ((type *) ((char *) (ptr) - offsetof(type, field)))
 #endif
 
+void request_start(conn_ctx_t *ctx) {
+  DEBUG_LOG("request start");
+}
+
+void request_end(conn_ctx_t *ctx) {
+  ctx->request_len = 0;
+  DEBUG_LOG("request end");
+}
+
 conn_ctx_t *alloc_conn_context() {
   conn_ctx_t *ctx = (conn_ctx_t *) malloc(sizeof(conn_ctx_t));
   ctx->data = NULL;
@@ -42,6 +51,7 @@ void response_send_cb(uv_write_t *write, int status) {
     WARNING_LOG("Write error %s", uv_err_name(uv_last_error(loop)));
   }
   DEBUG_LOG("response send done");
+  request_end(ctx);
   //uv_close((uv_handle_t*) &ctx->client, context_clean_cb);
 }
 
@@ -52,11 +62,13 @@ void handle_request(uv_work_t *worker) {
 }
 
 void send_response(uv_work_t *worker, int status) {
+  conn_ctx_t *ctx = container_of(worker, conn_ctx_t, worker);
   if (status < 0) {
+    DEBUG_LOG("send response fail, maybe canceled, status %d", status);
+    request_end(ctx);
     return;
   }
   uv_loop_t *loop = worker->loop;
-  conn_ctx_t *ctx = container_of(worker, conn_ctx_t, worker);
   DEBUG_LOG("send response [%s]", ctx->response.buf);
   ctx->response_buf.base = (char *)&ctx->response;
   ctx->response_buf.len = ctx->response.head.len + sizeof(upstream_response_head_t);
@@ -75,19 +87,20 @@ static void on_request(uv_stream_t *client, ssize_t nread, uv_buf_t buf) {
     if (uv_last_error(loop).code != UV_EOF) {
       WARNING_LOG("Read error %s", uv_err_name(uv_last_error(loop)));
     }
-    DEBUG_LOG("nread %ld < 0 and close client", nread);
+    DEBUG_LOG("nread %ld < 0 and close client, code = %d",
+        nread, uv_last_error(loop).code);
     uv_cancel((uv_req_t*) &ctx->worker);
     uv_close((uv_handle_t*) client, context_clean_cb);
     return;
   }
 
-  ctx->request_len += nread;
+  ctx->request_len = nread;
   if (ctx->request_len > (int)REQUEST_BUF_SIZE) {
+    DEBUG_LOG("read reqlen %d > %ld", ctx->request_len, REQUEST_BUF_SIZE);
     ctx->request_len = REQUEST_BUF_SIZE;
-    return;
   }
 
-  DEBUG_LOG("read %ld/%d/%ld", nread, ctx->request_len, REQUEST_BUF_SIZE);
+  DEBUG_LOG("read %ld/%d/%ld %ld", nread, ctx->request_len, REQUEST_BUF_SIZE, buf.len);
   if (ctx->request.params.magic != sizeof(query_params_t)) {
     WARNING_LOG("read request's magic is not correct");
     uv_close((uv_handle_t*) client, context_clean_cb);
